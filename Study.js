@@ -87,6 +87,7 @@ if (hamibot.env.init_url == undefined) {
 	var init_url = hamibot.env.init_url;
 	console.info('四人/双人/挑战题库地址: ' + init_url);
 }
+var first_com_no = hamibot.env.first_com_no;
 var file_tmp = false;
 var tikus = '';
 var wht_update_tiku_end = false;
@@ -2063,14 +2064,14 @@ function challengeQuestionLoop(conNum) {
 		console.error("答案获取失败!");
 		return;
 	}
-	var reg = /.*择词语的正确.*/g;
-	var rea = /.*择正确的读音.*/g;
-	var reb = /.*不属于二十四史的是.*/g;
-	if (reg.test(question) || rea.test(question) || reb.test(question)) { // 选择第一个
-		console.log((conNum + 1).toString() + ".直接选第一个!!!");
-		className('android.widget.RadioButton').depth(28).findOne().click();
-		return;
-	}
+	// var reg = /.*择词语的正确.*/g;
+	// var rea = /.*择正确的读音.*/g;
+	// var reb = /.*不属于二十四史的是.*/g;
+	// if (reg.test(question) || rea.test(question) || reb.test(question)) { // 选择第一个
+	// 	console.log((conNum + 1).toString() + ".直接选第一个!!!");
+	// 	className('android.widget.RadioButton').depth(28).findOne().click();
+	// 	return;
+	// }
 	console.log((conNum + 1).toString() + ".题目：" + question);
 	var answer = getAnswer(question);
 	console.info("答案：" + answer);
@@ -2094,17 +2095,33 @@ function challengeQuestionLoop(conNum) {
 		console.log("---------------------------");
 	} else //如果找到了答案
 	{
+		var ii = 1;
+		var iii = 1;
+		listArray.forEach(items => {
+			try {
+				console.info('选项' + ii + '：' + items.child(0).child(1).text());
+			} catch (e) {}
+			ii++;
+		});
 		listArray.forEach(item => {
-			var listDescStr = item.child(0).child(1).text();
-			console.info('选项: '+listDescStr);
-			delay(random(2, 3));
-			if (listDescStr == null) console.error('listDescStr为空');
-			if (listDescStr == answer) {
+			try {
+				var listDescStr = item.child(0).child(1).text();
+				var answer_replace = answer.replace(/\ +/g, ""); //去掉空格方法
+				answer_replace = answer_replace.replace(/[ ]/g, ""); //去掉空格
+				answer_replace = answer_replace.replace(/[\r\n]/g, ""); //去掉回车换行
+				answer_replace = answer_replace.replace(/-/g, ""); //去掉"-"号
+				var listDescStr_replace = listDescStr.replace(/\ +/g, ""); //去掉空格方法
+				listDescStr_replace = listDescStr.replace(/[ ]/g, ""); //去掉空格
+				listDescStr_replace = listDescStr.replace(/[\r\n]/g, ""); //去掉回车换行
+				listDescStr_replace = listDescStr.replace(/-/g, ""); //去掉"-"号
+			} catch (e) {}
+			if (listDescStr_replace == answer_replace) {
+				console.info('答案匹配选项：' + listDescStr_replace);
 				delay(random(0.5, 1)); //随机延时0.5-1秒
 				try {
 					item.child(0).click(); //点击答案
 					hasClicked = true;
-				} catch (e) {}
+				} catch (e) {} //防止答错后因为child为空导致报错而停止脚本
 				delay(0.5); //等待0.5秒，是否出现X
 				if (!text("v5IOXn6lQWYTJeqX2eHuNcrPesmSud2JdogYyGnRNxujMT8RS7y43zxY4coWepspQkvw" +
 						"RDTJtCTsZ5JW+8sGvTRDzFnDeO+BcOEpP0Rte6f+HwcGxeN2dglWfgH8P0C7HkCMJOAAAAAElFTkSuQmCC")
@@ -2123,7 +2140,10 @@ function challengeQuestionLoop(conNum) {
 					/*checkAndUpdate(question, answer, ClickAnswer);*/
 				}
 				console.log("---------------------------");
+			} else {
+				console.log('答案未能匹配选项' + iii);
 			}
+			iii++;
 		});
 	}
 	if (!hasClicked) //如果没有点击成功
@@ -2971,6 +2991,48 @@ function startDownload() {
 var xxx = 1;
 
 function zsyAnswer() {
+	if (first_com_no) {
+		console.info('已开启首轮不答');
+		sleep(random_time(delay_time));
+		if (text("随机匹配").exists()) {
+			text("随机匹配").findOne(3000).parent().child(0).click();
+			console.log("点击随机匹配");
+		} else {
+			console.log("点击开始比赛");
+			var s = text("开始比赛").findOne(5000);
+			if (s) {
+				s.click();
+			} else {
+				console.log('没有找到开始比赛，点击随机匹配');
+				text("随机匹配").findOne(3000).parent().child(0).click();
+			}
+		}
+		delay(1);
+		if (text('知道了').exists()) {
+			console.warn('答题已满');
+			text('知道了').findOnce().click();
+			delay(2);
+			if (text("随机匹配").exists() || text("开始比赛").exists()) {
+				console.info('停止脚本');
+				exit();
+			} else return 0;
+		}
+		className("ListView").waitFor();
+		console.info('等待比赛结束');
+		while (!text('继续挑战').exists()) {
+			sleep(5000);
+		}
+		console.info('比赛结束');
+		delay(1);
+		text('继续挑战').click();
+		delay(3);
+		var j = text("开始比赛").findOne(5000);
+		if (j = null) {
+			console.error('不在竞赛页面，停止脚本');
+			exit();
+		}
+		console.info('开始正式比赛');
+	}
 	var break100 = false;
 	reb = /选择词语的正确.*/g;
 	rea = /选择正确的读音.*/g;
@@ -3182,11 +3244,23 @@ function zsyAnswer() {
 							} while (!point);
 						} */
 			if (break100) {
-				console.info('有人100了，不再等待下一题！');
-				var break100 = false;
-				sleep(5000);
-				if (!text("继续挑战").exists()) sleep(5000);
-				break;
+				var true100 = className("android.view.View").text("100").depth(24).findOne(500);
+				if (true100 == null) {
+					console.info('无法确定是否有人真的100！不动作');
+					var break100 = false;
+				} else {
+					console.info('有人100了，不再等待下一题！');
+					var break100 = false;
+					sleep(5000);
+					while (true) {
+						if (text("继续挑战").exists()) {
+							break;
+						} else {
+							sleep(500);
+						}
+					}
+					break;
+				}
 			}
 			console.log('等待下一题\n----------');
 			// if (className('android.widget.Image').depth(23).waitFor()) break;
@@ -3386,8 +3460,8 @@ function rand_mode() {
 			视频学习();
 		} else if (arr[i] == 3) {
 			订();
-//		} else if (arr[i] == 4) {
-		} else if (true) {
+		} else if (arr[i] == 4) {
+			//} else if (true) {
 			挑战();
 		} else if (arr[i] == 5) {
 			文章和广播();
@@ -3473,6 +3547,7 @@ function 双人() {
 		}
 		zsyAnswer();
 		delay(1);
+		console.info("双人答题结束，悬浮窗位置改变");
 		console.setPosition(0, device.height / 2);
 	}
 }
@@ -3499,6 +3574,7 @@ function 四人() {
 		}
 		zsyAnswer();
 		delay(0.5);
+		console.info("四人赛答题结束，悬浮窗位置改变");
 		console.setPosition(0, device.height / 2);
 		//delay(1);
 		// back();
@@ -3506,7 +3582,7 @@ function 四人() {
 }
 
 function 挑战() {
-	 tzCount = 1;
+	//tzCount = 1;
 	if ((tzCount != 0 || 点点通['挑战答题']) && tiaozhan == true) {
 		news = false;
 		console.info('开始挑战答题');
